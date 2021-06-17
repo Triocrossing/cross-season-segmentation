@@ -11,7 +11,8 @@
 
     "cmu_root_path": "/media/user/cvpr2019-cross-season-correspondence/cross-season-correspondence-datasets-public-version/CMU",
     "cmu_corr_path": "/media/user/cvpr2019-cross-season-correspondence/cross-season-correspondence-datasets-public-version/CMU/correspondence_data", 
-    "cmu_im_path": "/media/user/cvpr2019-cross-season-correspondence/cross-season-correspondence-datasets-public-version/CMU/images"    
+    "cmu_im_path": "/media/user/cvpr2019-cross-season-correspondence/cross-season-correspondence-datasets-public-version/CMU/images",   
+    "network_file": "/Users/triocrossing/INRIA/SemanticSegmentation/cross-season-segmentation/network/RC-CS-Vistas-HingeF.pth"
 }
 
 

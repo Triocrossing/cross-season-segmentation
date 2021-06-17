@@ -11,6 +11,7 @@ from PIL import Image
 import torchvision.transforms as standard_transforms
 import h5py
 import math
+import cv2
 
 import sys
 import time
@@ -27,6 +28,7 @@ def segment_images_in_folder(network_file, img_folder, save_folder, args):
         print("Using CUDA" if torch.cuda.is_available() else "Using CPU")
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     else:
+        print('using cpu for computing')
         device = "cpu"
 
     # Network and weight loading
@@ -63,7 +65,8 @@ def segment_images_in_folder(network_file, img_folder, save_folder, args):
 
     # get all file names
     filenames_ims = list()
-    filenames_segs = list()
+    filenames_segs_clr = list()
+    filenames_segs_gt = list()
     print('Scanning %s for images to segment.' % img_folder)
     for root, subdirs, files in os.walk(img_folder):
         filenames = [f for f in files if f.endswith(args['img_ext'])]
@@ -72,7 +75,10 @@ def segment_images_in_folder(network_file, img_folder, save_folder, args):
             seg_path = root.replace(img_folder, save_folder)
             check_mkdir(seg_path)
             filenames_ims += [os.path.join(root, f) for f in filenames]
-            filenames_segs += [os.path.join(seg_path,
+            filenames_segs_clr += [os.path.join(seg_path, "clr",
+                                            f.replace(args['img_ext'],
+                                                      '.png')) for f in filenames]
+            filenames_segs_gt += [os.path.join(seg_path, "gt",
                                             f.replace(args['img_ext'],
                                                       '.png')) for f in filenames]
 
@@ -91,7 +97,8 @@ def segment_images_in_folder(network_file, img_folder, save_folder, args):
             n_slices_per_pass=args['n_slices_per_pass'])
 
     count = 1
-    for im_file, save_path in zip(filenames_ims, filenames_segs):
+    for im_file, save_path in zip(filenames_ims, filenames_segs_clr):
+        save_pathGT = filenames_segs_gt[count]
         tnow = time.time()
         print(
             "[%d/%d (%.1fs/%.1fs)] %s" %
@@ -104,14 +111,26 @@ def segment_images_in_folder(network_file, img_folder, save_folder, args):
                 count *
                 len(filenames_ims),
                 im_file))
-        segmentor.run_and_save(
-            im_file,
-            save_path,
-            pre_sliding_crop_transform=pre_validation_transform,
-            sliding_crop=sliding_crop,
-            input_transform=input_transform,
-            skip_if_seg_exists=True,
-            use_gpu=args['use_gpu'])
+        predictMask = segmentor.run_and_save(
+                          im_file,
+                          save_path,
+                          pre_sliding_crop_transform=pre_validation_transform,
+                          sliding_crop=sliding_crop,
+                          input_transform=input_transform,
+                          skip_if_seg_exists=True,
+                          use_gpu=args['use_gpu'])
+        # predictMask.save(save_pathGT)
+        print(im_file)
+        imgo = cv2.imread(im_file)
+        height = imgo.shape[0]
+        width = imgo.shape[1]
+        # print(predictMask)
+
+        print(f'h {height}, w {width}')
+        if save_pathGT is not None:
+            check_mkdir(os.path.dirname(save_pathGT))
+            resized = cv2.resize(predictMask, (width,height), interpolation = cv2.INTER_NEAREST)
+            cv2.imwrite(save_pathGT,resized)
         count += 1
 
     tend = time.time()
@@ -202,22 +221,23 @@ if __name__ == '__main__':
     global_opts = get_global_opts()
 
     args = {
-        'use_gpu': True,
+        'use_gpu': False,
         # 'miou' (miou over classes present in validation set), 'acc'
         'validation_metric': 'miou',
         'img_set': '',  # ox-vis, cmu-vis, wilddash , ox, cmu, cityscapes overwriter img_path, img_ext and save_folder_name. Set to empty string to ignore
 
 
-        'img_path': '/semseg/testimg/val',
+        'img_path': '/Volumes/Xi_SSD_1To/Cross_Seasonal_Dataset/RobotCar-Seasons/dusk/rear',
         # 'img_ext': '.png',
         'img_ext': '.jpg',
-        'save_folder_name': '/semseg/testimg/output',
+        'save_folder_name': '/Volumes/Xi_SSD_1To/Cross_Seasonal_Dataset/RobotCar-Seasons/dusk/css',
 
         # specify this if using specific weight file
-        'network_file': global_opts['network_file'] if 'network_file' in global_opts else '',
+        'network_file': '/Users/triocrossing/INRIA/SemanticSegmentation/cross-season-segmentation/network/RC-CS-Vistas-HingeF.pth',
 
-        'n_slices_per_pass': 10,
+        'n_slices_per_pass': 1,
         'sliding_transform_step': 2 / 3.
     }
+    network_folder = '/Users/triocrossing/INRIA/SemanticSegmentation/cross-season-segmentation/network'
 
     segment_images_in_folder_for_experiments(network_folder, args)

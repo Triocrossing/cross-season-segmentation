@@ -134,6 +134,7 @@ class Segmentor():
                         "Segmentation already exists, overwriting: {}".format(seg_path))
 
         try:
+            print(img_path)
             img = Image.open(img_path).convert('RGB')
         except OSError:
             print("Error reading input image, skipping: {}".format(img_path))
@@ -155,6 +156,8 @@ class Segmentor():
             sliding_transform_step=sliding_crop.stride_rate,
             use_gpu=use_gpu)
 
+        # print(prediction_orig)
+        prediction_orig_copy = np.copy(prediction_orig)
         if self.colorize_fcn is not None:
             prediction_colorized = self.colorize_fcn(prediction_orig)
         else:
@@ -168,4 +171,4 @@ class Segmentor():
             check_mkdir(os.path.dirname(seg_path))
             prediction_colorized.save(seg_path)
 
-        return prediction_orig
+        return prediction_orig_copy
