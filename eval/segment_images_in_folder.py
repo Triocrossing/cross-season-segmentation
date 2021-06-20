@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from PIL import Image
 import torchvision.transforms as standard_transforms
-import h5py
+# import h5py
 import math
 import cv2
 
@@ -17,7 +17,13 @@ import sys
 import time
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-
+ignore_label = 255
+id_to_trainid= {-1: ignore_label, 0: ignore_label, 1: ignore_label, 2: ignore_label,
+        3: ignore_label, 4: ignore_label, 5: ignore_label, 6: ignore_label,
+        7: 0, 8: 1, 9: ignore_label, 10: ignore_label, 11: 2, 12: 3, 13: 4,
+        14: ignore_label, 15: ignore_label, 16: ignore_label, 17: 5,
+        18: ignore_label, 19: 6, 20: 7, 21: 8, 22: 9, 23: 10, 24: 11, 25: 12, 26: 13, 27: 14,
+        28: 15, 29: ignore_label, 30: ignore_label, 31: 16, 32: 17, 33: 18}
 # see below how to call this funcition
 
 
@@ -97,8 +103,12 @@ def segment_images_in_folder(network_file, img_folder, save_folder, args):
             n_slices_per_pass=args['n_slices_per_pass'])
 
     count = 1
+    print(f'len im: {len(filenames_ims)}')
+    print(f'len clr: {len(filenames_segs_clr)}')
+    print(f'len gt: {len(filenames_segs_gt)}')
+    invDict = invDict = dict(zip(id_to_trainid.values(), id_to_trainid.keys()))
     for im_file, save_path in zip(filenames_ims, filenames_segs_clr):
-        save_pathGT = filenames_segs_gt[count]
+        save_pathGT = filenames_segs_gt[count-1]
         tnow = time.time()
         print(
             "[%d/%d (%.1fs/%.1fs)] %s" %
@@ -130,7 +140,10 @@ def segment_images_in_folder(network_file, img_folder, save_folder, args):
         if save_pathGT is not None:
             check_mkdir(os.path.dirname(save_pathGT))
             resized = cv2.resize(predictMask, (width,height), interpolation = cv2.INTER_NEAREST)
-            cv2.imwrite(save_pathGT,resized)
+            newresized = np.zeros_like(resized)
+            for k, v in invDict.items():
+              newresized[resized == k] = v
+            cv2.imwrite(save_pathGT,newresized)
         count += 1
 
     tend = time.time()
@@ -221,23 +234,25 @@ if __name__ == '__main__':
     global_opts = get_global_opts()
 
     args = {
-        'use_gpu': False,
+        'use_gpu': True,
         # 'miou' (miou over classes present in validation set), 'acc'
         'validation_metric': 'miou',
         'img_set': '',  # ox-vis, cmu-vis, wilddash , ox, cmu, cityscapes overwriter img_path, img_ext and save_folder_name. Set to empty string to ignore
 
 
-        'img_path': '/Volumes/Xi_SSD_1To/Cross_Seasonal_Dataset/RobotCar-Seasons/dusk/rear',
+        # 'img_path': '/srv/tempdd/xwang/RobotCarSeason/sun/rear',
+        'img_path': '/srv/tempdd/xwang/oldRobotCarSeason/overcast-reference/rear',
         # 'img_ext': '.png',
         'img_ext': '.jpg',
-        'save_folder_name': '/Volumes/Xi_SSD_1To/Cross_Seasonal_Dataset/RobotCar-Seasons/dusk/css',
+        # 'save_folder_name': '/srv/tempdd/xwang/RobotCarSeason/sun/css',
+        'save_folder_name': '/srv/tempdd/xwang/oldRobotCarSeason/overcast-reference/css',
 
         # specify this if using specific weight file
-        'network_file': '/Users/triocrossing/INRIA/SemanticSegmentation/cross-season-segmentation/network/RC-CS-Vistas-HingeF.pth',
+        'network_file': '/udd/xwang/xwang/cross-season-segmentation/network/RC-CS-Vistas-HingeF.pth',
 
         'n_slices_per_pass': 1,
         'sliding_transform_step': 2 / 3.
     }
-    network_folder = '/Users/triocrossing/INRIA/SemanticSegmentation/cross-season-segmentation/network'
+    network_folder = '/udd/xwang/xwang/cross-season-segmentation/network'
 
     segment_images_in_folder_for_experiments(network_folder, args)

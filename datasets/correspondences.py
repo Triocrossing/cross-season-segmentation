@@ -2,7 +2,7 @@ import os
 import random
 
 import numpy as np
-import h5py
+# import h5py
 import torch
 from PIL import Image, ImageOps
 from torch.utils import data
@@ -100,7 +100,8 @@ class Correspondences(data.Dataset):
     def __getitem__(self, index):
         # Load data from one sample
         mat_content = {}
-        f = h5py.File(self.data[index], 'r')
+        # f = h5py.File(self.data[index], 'r')
+        f=[]
         for k, v in f.items():
             asd = 0
             mat_content[k] = np.array(v)
